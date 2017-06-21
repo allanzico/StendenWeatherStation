@@ -1,24 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Xml.Linq;
-using System.IO;
-using System.Web;
 using System.Xml;
 using System.Diagnostics;
-using System.Timers;
 using System.Threading;
 using System.Net;
-using System.Data.SqlClient;
-using MySql.Data;
 using MySql.Data.MySqlClient;
-using System.Windows.Forms.DataVisualization.Charting;
 
 namespace weather
 {
@@ -86,7 +73,6 @@ namespace weather
                 Temperature = channel.Attributes["temp"].Value;
                 ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
                 Condition = channel.Attributes["text"].Value;
-                //Date = channel.Attributes["date"].Value;
                 Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
                 WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
                 City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
@@ -96,7 +82,9 @@ namespace weather
                 temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
                 chart1.Series[0].LegendText = celsius ? " ° C" : "° F";
                 conditionlbl.Text = "Condition: " + " " + Condition;
+                pictureBox1.ImageLocation = "../" + Condition + ".png";
                 windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+                
                 string[] Forecast = new string[9];
                 int i = 0;
                 foreach (XmlNode node in data.SelectNodes("//results/channel/item/yweather:forecast", manager))
@@ -107,7 +95,6 @@ namespace weather
                         i++;
                     }
                 }
-                Debug.WriteLine("constructor fired");
                 try
                 {
                     // Open the connection and execute command (query
@@ -134,7 +121,7 @@ namespace weather
                     // Show error
                     MessageBox.Show(ex.Message);
                 }
-                string selectQuery = celsius ? ("SELECT date,(temperature-32)*5/9 AS temperature FROM weather") : ("SELECT * FROM weather");
+                string selectQuery = celsius ? ("SELECT date,ROUND((temperature-32)*5/9) AS temperature FROM weather") : ("SELECT * FROM weather");
                 try
                 {
                     conn.Open();
@@ -173,8 +160,6 @@ namespace weather
 
         private void citytxt_TextChanged(object sender, EventArgs e)
         {
-            getWeather();
-            citytxt.AppendText(City);
         }
 
         private void okbtn_Click(object sender, EventArgs e)
@@ -239,11 +224,7 @@ namespace weather
             }
 
         }
-        public void SQL()
-        {
-
-
-        }
+        
 
         private void chart1_Click(object sender, EventArgs e)
         {
@@ -307,6 +288,27 @@ namespace weather
         private void notifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             this.Show();
+        }
+
+        private void citylbl_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void refreshToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            citylbl.Text = citytxt.Text;
+            City = citytxt.Text;
+            Interval = int.Parse(intervaltxt.Text);
+            getWeather();
+            aTimer.Stop();
+            aTimer.Interval = Interval;
+            aTimer.Start();
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
