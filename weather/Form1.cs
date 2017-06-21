@@ -63,6 +63,14 @@ namespace weather
                 Hide();
             }
         }
+        private void weather_FormClosing(object sender, FormClosingEventArgs e)
+        {
+           
+                notifyIcon1.Visible = true;
+                WindowState = FormWindowState.Minimized;
+                e.Cancel = true;
+            
+        }
 
         //Get Weather from Yahoo API
         private void getWeather()
