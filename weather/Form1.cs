@@ -59,19 +59,22 @@ namespace weather
         }
         private void weather_Resize(object sender, EventArgs e)
         {
-            if (FormWindowState.Minimized == WindowState)
+            if (this.WindowState == FormWindowState.Minimized)
             {
-                Hide();
+                this.ShowInTaskbar = false;
+            }
+            else
+            {
+                this.ShowInTaskbar = true;
             }
         }
         private void weather_FormClosing(object sender, FormClosingEventArgs e)
         {
 
-            if (e.CloseReason == CloseReason.UserClosing)
-            {
+            if (e.CloseReason != CloseReason.TaskManagerClosing &&
+                e.CloseReason != CloseReason.WindowsShutDown)
                 e.Cancel = true;
-                Hide();
-            }
+            this.WindowState = FormWindowState.Minimized;
 
         }
 
