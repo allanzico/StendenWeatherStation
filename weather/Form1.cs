@@ -15,6 +15,8 @@ using System.Diagnostics;
 using System.Timers;
 using System.Threading;
 using System.Net;
+using System.Data.SqlClient;
+using MySql.Data;
 
 namespace weather
 {
@@ -30,6 +32,8 @@ namespace weather
         public string LastUpdate;
         public System.Windows.Forms.Timer aTimer;
         private Boolean celsius = true;
+        private MySql.Data.MySqlClient.MySqlConnection conn;
+        private MySql.Data.MySqlClient.MySqlCommand cmd;
 
         public weather()
         {
@@ -38,9 +42,12 @@ namespace weather
             Thread.Sleep(5000);
             InitializeComponent();
             t.Abort();
-            
             City = "Emmen";
             Interval = 60;
+            conn = new MySql.Data.MySqlClient.MySqlConnection();
+            cmd = new MySql.Data.MySqlClient.MySqlCommand();
+            // Set connection / query
+            conn.ConnectionString = "server=localhost;uid=root;pwd=;database=FinalAssignment;";
             aTimer = new System.Windows.Forms.Timer();
             aTimer.Interval = Interval;
             aTimer.Tick += new EventHandler(OnTimedEvent);
@@ -81,9 +88,8 @@ namespace weather
         //Get Weather from Yahoo API
         private void getWeather()
         {
-            try
-            {
-                string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
+
+            string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
                 string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
                 XmlDocument data = new XmlDocument();
                 data.Load(path);
@@ -104,19 +110,51 @@ namespace weather
                 temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
                 conditionlbl.Text = "Condition: " + " " + Condition;
                 windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
-            }
-            catch (WebException exp)
+                string[] Forecast = new string[5];
+                int i = 0;
+            foreach (XmlNode node in data.SelectNodes("//results/channel/item/yweather:forecast", manager))
             {
-                if (exp.Status == WebExceptionStatus.ProtocolError &&
-                exp.Response != null)
+                
+                if (i <= 4)
                 {
-                    var webres = (HttpWebResponse)exp.Response;
-
+                    Forecast[i] = node.Attributes["date"].Value + "," + node.Attributes["high"].Value;
+                     i++;
                 }
+
             }
-            
+            Debug.WriteLine("constructor fired");
+            try
+            {
+                // Open the connection and execute command (query
+                string myquerystring;
+                conn.Open();
+                cmd.Connection = conn;
+                foreach(string forecast in Forecast)
+                {
+                    string[] split = forecast.Split(',');
+                    myquerystring = "INSERT INTO weather VALUES(NULL, '" + City + "', '" + split[0] + "', '" + split[1] + "')";
+                    MessageBox.Show(myquerystring);
+                    cmd.CommandText = myquerystring;
+                    cmd.ExecuteNonQuery();
+                }
+                
+                cmd.ExecuteNonQuery();
+                MessageBox.Show("Row Inserted into database successfully!",
+                "Success!", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+                // Close connection
+                conn.Close();
+
+            }
+            catch (MySql.Data.MySqlClient.MySqlException ex)
+            {
+                // Show error
+                MessageBox.Show(ex.Message);
+            }
 
         }
+            
+
+        
 
         private static XmlNamespaceManager NewMethod(XmlDocument data)
         {
@@ -236,6 +274,30 @@ namespace weather
                 WindowState = FormWindowState.Normal;
             }
            
+        }
+        private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.WindowState = FormWindowState.Minimized;  //minimize button at Stip menu
+
+            if (FormWindowState.Minimized == this.WindowState)
+            {
+                notifyIcon1.Visible = true;
+                notifyIcon1.ShowBalloonTip(500);
+                this.Hide();
+            }
+
+            else if (FormWindowState.Normal == this.WindowState)
+            {
+                notifyIcon1.Visible = false;
+            }
+
+
+        }
+
+        private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.WindowState = FormWindowState.Normal;
+            this.tabControl1.SelectedTab = tabPage3; //show tab3:  Options 
         }
     }
 }
