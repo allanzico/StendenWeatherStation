@@ -14,6 +14,7 @@ using System.Xml;
 using System.Diagnostics;
 using System.Timers;
 using System.Threading;
+using System.Net;
 
 namespace weather
 {
@@ -75,27 +76,40 @@ namespace weather
         //Get Weather from Yahoo API
         private void getWeather()
         {
-            string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
-            string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
-            XmlDocument data = new XmlDocument();
-            data.Load(path);
-            XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
-            manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
-            //Get data from XML document and acquire weather details
-            XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);         
-            Temperature = channel.Attributes["temp"].Value;
-            ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8),0).ToString();  //Convert Temperature from Celcius to Farhnheit
-            Condition = channel.Attributes["text"].Value;
-            //Date = channel.Attributes["date"].Value;
-            Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
-            WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
-            City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
-            intervaltxt.Text = Interval.ToString();
-            citylbl.Text = City;
-            datelbl.Text = Date;
-            temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
-            conditionlbl.Text = "Condition: " + " " + Condition;
-            windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "km/hr";
+            try
+            {
+                string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
+                string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
+                XmlDocument data = new XmlDocument();
+                data.Load(path);
+                XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
+                manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
+                //Get data from XML document and acquire weather details
+                XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
+                Temperature = channel.Attributes["temp"].Value;
+                ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
+                Condition = channel.Attributes["text"].Value;
+                //Date = channel.Attributes["date"].Value;
+                Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
+                WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
+                City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
+                intervaltxt.Text = Interval.ToString();
+                citylbl.Text = City;
+                datelbl.Text = Date;
+                temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
+                conditionlbl.Text = "Condition: " + " " + Condition;
+                windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+            }
+            catch (WebException exp)
+            {
+                if (exp.Status == WebExceptionStatus.ProtocolError &&
+                exp.Response != null)
+                {
+                    var webres = (HttpWebResponse)exp.Response;
+
+                }
+            }
+            
 
         }
 
@@ -141,25 +155,38 @@ namespace weather
         private void OnTimedEvent(object source, EventArgs e)
 
         {
-            string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
-            string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
-            XmlDocument data = new XmlDocument();
-            data.Load(path);
-            XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
-            manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
-            //Get data from XML document and acquire weather details
-            XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
-            Temperature = channel.Attributes["temp"].Value;
-            ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
-            Condition = channel.Attributes["text"].Value;
-            //Date = channel.Attributes["date"].Value;
-            Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
-            WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
-            City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
-            datelbl.Text = Date;
-            temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
-            conditionlbl.Text = "Condition: " + " " + Condition;
-            windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "km/hr";
+            try
+            {
+                string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
+                string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
+                XmlDocument data = new XmlDocument();
+                data.Load(path);
+                XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
+                manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
+                //Get data from XML document and acquire weather details
+                XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
+                Temperature = channel.Attributes["temp"].Value;
+                ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
+                Condition = channel.Attributes["text"].Value;
+                //Date = channel.Attributes["date"].Value;
+                Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
+                WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
+                City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
+                datelbl.Text = Date;
+                temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
+                conditionlbl.Text = "Condition: " + " " + Condition;
+                windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+            }
+            catch (WebException exp)
+            {
+                if (exp.Status == WebExceptionStatus.ProtocolError &&
+                exp.Response != null)
+                {
+                    var webres = (HttpWebResponse)exp.Response;
+                    
+                }
+            }
+            
         }
         public void SQL()
         {
