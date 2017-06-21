@@ -17,6 +17,8 @@ using System.Threading;
 using System.Net;
 using System.Data.SqlClient;
 using MySql.Data;
+using MySql.Data.MySqlClient;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace weather
 {
@@ -34,7 +36,8 @@ namespace weather
         private Boolean celsius = true;
         private MySql.Data.MySqlClient.MySqlConnection conn;
         private MySql.Data.MySqlClient.MySqlCommand cmd;
-
+        private DataTable datatable = new DataTable();
+        private MySqlDataAdapter adapter;
         public weather()
         {
             Thread t = new Thread(new ThreadStart(splashStart));
@@ -53,7 +56,7 @@ namespace weather
             aTimer.Tick += new EventHandler(OnTimedEvent);
             aTimer.Start();
             getWeather();
-            notifyIcon1.ContextMenuStrip = contextMenuStrip1;
+            
         }
         private void splashStart()
         {
@@ -64,39 +67,22 @@ namespace weather
         {
 
         }
-        private void weather_Resize(object sender, EventArgs e)
-        {
-            if (this.WindowState == FormWindowState.Minimized)
-            {
-                this.ShowInTaskbar = false;
-            }
-            else
-            {
-                this.ShowInTaskbar = true;
-            }
-        }
-        private void weather_FormClosing(object sender, FormClosingEventArgs e)
-        {
-
-            if (e.CloseReason != CloseReason.TaskManagerClosing &&
-                e.CloseReason != CloseReason.WindowsShutDown)
-                e.Cancel = true;
-            this.WindowState = FormWindowState.Minimized;
-
-        }
+       
 
         //Get Weather from Yahoo API
         private void getWeather()
         {
 
             string query = "select * from weather.forecast where woeid  in (select woeid from geo.places(1) where text='" + City + ", NL')";
-                string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
-                XmlDocument data = new XmlDocument();
-                data.Load(path);
-                XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
-                manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
-                //Get data from XML document and acquire weather details
-                XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
+            string path = "https://query.yahooapis.com/v1/public/yql?q=" + query + "&format=xml";
+            XmlDocument data = new XmlDocument();
+            data.Load(path);
+            XmlNamespaceManager manager = new XmlNamespaceManager(data.NameTable);
+            manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
+            //Get data from XML document and acquire weather details
+            XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
+            if (channel.Attributes["temp"].Value != null)
+            {
                 Temperature = channel.Attributes["temp"].Value;
                 ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
                 Condition = channel.Attributes["text"].Value;
@@ -108,53 +94,72 @@ namespace weather
                 citylbl.Text = City;
                 datelbl.Text = Date;
                 temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
+                chart1.Series[0].LegendText = celsius ? " ° C" : "° F";
                 conditionlbl.Text = "Condition: " + " " + Condition;
                 windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
-                string[] Forecast = new string[5];
+                string[] Forecast = new string[9];
                 int i = 0;
-            foreach (XmlNode node in data.SelectNodes("//results/channel/item/yweather:forecast", manager))
-            {
-                
-                if (i <= 4)
+                foreach (XmlNode node in data.SelectNodes("//results/channel/item/yweather:forecast", manager))
                 {
-                    Forecast[i] = node.Attributes["date"].Value + "," + node.Attributes["high"].Value;
-                     i++;
+                    if (i < data.SelectNodes("//results/channel/item/yweather:forecast", manager).Count - 1)
+                    {
+                        Forecast[i] = node.Attributes["date"].Value + "," + node.Attributes["high"].Value;
+                        i++;
+                    }
                 }
-
-            }
-            Debug.WriteLine("constructor fired");
-            try
-            {
-                // Open the connection and execute command (query
-                string myquerystring;
-                conn.Open();
-                cmd.Connection = conn;
-                foreach(string forecast in Forecast)
+                Debug.WriteLine("constructor fired");
+                try
                 {
-                    string[] split = forecast.Split(',');
-                    myquerystring = "INSERT INTO weather VALUES(NULL, '" + City + "', '" + split[0] + "', '" + split[1] + "')";
-                    MessageBox.Show(myquerystring);
-                    cmd.CommandText = myquerystring;
+                    // Open the connection and execute command (query
+                    conn.Open();
+                    cmd.Connection = conn;
+                    string deleteQuery = "truncate weather";
+                    cmd.CommandText = deleteQuery;
                     cmd.ExecuteNonQuery();
-                }
-                
-                cmd.ExecuteNonQuery();
-                MessageBox.Show("Row Inserted into database successfully!",
-                "Success!", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-                // Close connection
-                conn.Close();
+                    string myquerystring;
 
-            }
-            catch (MySql.Data.MySqlClient.MySqlException ex)
-            {
-                // Show error
-                MessageBox.Show(ex.Message);
+                    for (int x = 0; x < 5; x++)
+                    {
+                        string[] split = Forecast[x].Split(',');
+                        myquerystring = "INSERT INTO weather VALUES(NULL, '" + City + "', '" + split[0] + "', '" + split[1] + "')";
+                        cmd.CommandText = myquerystring;
+                        cmd.ExecuteNonQuery();
+                    }
+                    // Close connection
+                    conn.Close();
+
+                }
+                catch (MySql.Data.MySqlClient.MySqlException ex)
+                {
+                    // Show error
+                    MessageBox.Show(ex.Message);
+                }
+                string selectQuery = celsius ? ("SELECT date,(temperature-32)*5/9 AS temperature FROM weather") : ("SELECT * FROM weather");
+                try
+                {
+                    conn.Open();
+                    cmd.Connection = conn;
+                    cmd.CommandText = selectQuery;
+                    adapter = new MySqlDataAdapter(cmd);
+                    datatable.Clear();
+                    adapter.Fill(datatable);
+                    conn.Close();
+
+                }
+                catch (MySqlException ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+
+                chart1.Series["Temp"].Points.Clear();
+                chart1.DataSource = datatable;
+                chart1.Series["Temp"].XValueMember = "date";
+                chart1.Series["Temp"].YValueMembers = "temperature";
+                chart1.DataBind();
             }
 
         }
-            
 
-        
 
         private static XmlNamespaceManager NewMethod(XmlDocument data)
         {
@@ -163,7 +168,7 @@ namespace weather
 
         private void temperaturelbl_Click(object sender, EventArgs e)
         {
-                   
+
         }
 
         private void citytxt_TextChanged(object sender, EventArgs e)
@@ -174,14 +179,14 @@ namespace weather
 
         private void okbtn_Click(object sender, EventArgs e)
         {
-            
-           citylbl.Text = citytxt.Text;
-           City = citytxt.Text; 
-           Interval = int.Parse(intervaltxt.Text);
-           getWeather();
-           aTimer.Stop();
-           aTimer.Interval = Interval;
-           aTimer.Start();
+
+            citylbl.Text = citytxt.Text;
+            City = citytxt.Text;
+            Interval = int.Parse(intervaltxt.Text);
+            getWeather();
+            aTimer.Stop();
+            aTimer.Interval = Interval;
+            aTimer.Start();
         }
 
         private void fahrenheitRadio_CheckedChanged(object sender, EventArgs e)
@@ -208,17 +213,20 @@ namespace weather
                 manager.AddNamespace("yweather", "http://xml.weather.yahoo.com/ns/rss/1.0");
                 //Get data from XML document and acquire weather details
                 XmlNode channel = data.SelectSingleNode("//results/channel/item/yweather:condition", manager);
-                Temperature = channel.Attributes["temp"].Value;
-                ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
-                Condition = channel.Attributes["text"].Value;
-                //Date = channel.Attributes["date"].Value;
-                Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
-                WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
-                City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
-                datelbl.Text = Date;
-                temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
-                conditionlbl.Text = "Condition: " + " " + Condition;
-                windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+                if (channel.Attributes["temp"].Value != null)
+                {
+                    Temperature = channel.Attributes["temp"].Value;
+                    ConvertTemperature = Math.Round(((int.Parse(Temperature) - 32) / 1.8), 0).ToString();  //Convert Temperature from Celcius to Farhnheit
+                    Condition = channel.Attributes["text"].Value;
+                    //Date = channel.Attributes["date"].Value;
+                    Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
+                    WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
+                    City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
+                    datelbl.Text = Date;
+                    temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
+                    conditionlbl.Text = "Condition: " + " " + Condition;
+                    windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+                }
             }
             catch (WebException exp)
             {
@@ -226,10 +234,10 @@ namespace weather
                 exp.Response != null)
                 {
                     var webres = (HttpWebResponse)exp.Response;
-                    
+
                 }
             }
-            
+
         }
         public void SQL()
         {
@@ -249,55 +257,56 @@ namespace weather
 
         }
 
-        private void closeToolStripMenuItem1_Click(object sender, EventArgs e)
+        
+
+        
+
+       
+        private void chart1_Click_1(object sender, EventArgs e)
         {
-            notifyIcon1.Dispose();
-            Application.Exit();
+
+
+
         }
 
-        private void closeToolStripMenuItem_Click(object sender, EventArgs e)
+        private void aboutToolStripMenuItem_Click_1(object sender, EventArgs e)
         {
-            Show();
-            WindowState = FormWindowState.Normal;
-        }
-
-        private void notifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            if (WindowState == FormWindowState.Normal)
-            {
-                Hide();
-                WindowState = FormWindowState.Minimized;
-            }
-            else
-            {
-                Show();
-                WindowState = FormWindowState.Normal;
-            }
-           
-        }
-        private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            this.WindowState = FormWindowState.Minimized;  //minimize button at Stip menu
-
-            if (FormWindowState.Minimized == this.WindowState)
-            {
-                notifyIcon1.Visible = true;
-                notifyIcon1.ShowBalloonTip(500);
-                this.Hide();
-            }
-
-            else if (FormWindowState.Normal == this.WindowState)
-            {
-                notifyIcon1.Visible = false;
-            }
-
-
+            about a = new about();
+            a.Show();
+            
         }
 
         private void optionsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.WindowState = FormWindowState.Normal;
-            this.tabControl1.SelectedTab = tabPage3; //show tab3:  Options 
+            this.Show();
+            tabControl1.SelectTab(2);
+        }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Show();
+        }
+
+        private void closeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Environment.Exit(0);
+        }
+
+        private void weather_SizeChanged(object sender, EventArgs e)
+        {
+
+        }
+        private void weather_FormClosing(object sender, FormClosingEventArgs e)
+        {
+
+            e.Cancel = true;
+            notifyIcon1.Visible = true;
+            this.Hide();
+
+        }
+        private void notifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            this.Show();
         }
     }
 }
