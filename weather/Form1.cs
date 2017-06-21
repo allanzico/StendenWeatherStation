@@ -66,11 +66,13 @@ namespace weather
         }
         private void weather_FormClosing(object sender, FormClosingEventArgs e)
         {
-           
-                notifyIcon1.Visible = true;
-                WindowState = FormWindowState.Minimized;
+
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
                 e.Cancel = true;
-            
+                Hide();
+            }
+
         }
 
         //Get Weather from Yahoo API
@@ -220,8 +222,17 @@ namespace weather
 
         private void notifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            Show();
-            WindowState = FormWindowState.Normal;
+            if (WindowState == FormWindowState.Normal)
+            {
+                Hide();
+                WindowState = FormWindowState.Minimized;
+            }
+            else
+            {
+                Show();
+                WindowState = FormWindowState.Normal;
+            }
+           
         }
     }
 }
