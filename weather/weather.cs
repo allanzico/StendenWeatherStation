@@ -18,6 +18,7 @@ namespace weather
         private int Interval;
         private string Date;
         private string ConvertTemperature;
+        private string Humidity;
         public string LastUpdate;
         public System.Windows.Forms.Timer aTimer;
         private Boolean celsius = true;
@@ -43,6 +44,7 @@ namespace weather
             aTimer.Tick += new EventHandler(OnTimedEvent);
             aTimer.Start();
             getWeather();
+
             
         }
         private void splashStart()
@@ -76,15 +78,18 @@ namespace weather
                 Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
                 WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
                 City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
+                Humidity = data.SelectSingleNode("//results/channel/yweather:atmosphere", manager).Attributes["humidity"].Value;
                 intervaltxt.Text = Interval.ToString();
                 citylbl.Text = City;
                 datelbl.Text = Date;
+                humiditylbl.Text = Humidity + " %";
                 temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
                 chart1.Series[0].LegendText = celsius ? " ° C" : "° F";
-                conditionlbl.Text = "Condition: " + " " + Condition;
-                pictureBox1.ImageLocation = "../" + Condition + ".png";
-                windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
-                
+                conditionlbl.Text = Condition;
+             
+                windlbl.Text = WindSpeed + " " + "m/hr";
+               pictureBox1.ImageLocation = Condition + ".png";
+                pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
                 string[] Forecast = new string[9];
                 int i = 0;
                 foreach (XmlNode node in data.SelectNodes("//results/channel/item/yweather:forecast", manager))
@@ -207,10 +212,15 @@ namespace weather
                     Date = data.SelectSingleNode("//results/channel/lastBuildDate", manager).InnerText;
                     WindSpeed = data.SelectSingleNode("//results/channel/yweather:wind", manager).Attributes["speed"].Value;
                     City = data.SelectSingleNode("//results/channel/yweather:location", manager).Attributes["city"].Value;
+                    Humidity = data.SelectSingleNode("//results/channel/yweather:atmosphere", manager).Attributes["humidity"].Value;
                     datelbl.Text = Date;
                     temperaturelbl.Text = celsius ? ConvertTemperature += " ° C" : Temperature += "° F";
-                    conditionlbl.Text = "Condition: " + " " + Condition;
-                    windlbl.Text = "Wind Speed: " + " " + WindSpeed + " " + "m/hr";
+                    conditionlbl.Text = Condition;
+                    windlbl.Text = WindSpeed + " " + "m/hr";
+                    humiditylbl.Text = Humidity + " %";
+                    toolStripTextBox1.Text = ConvertTemperature + " in " + City;
+                    pictureBox1.ImageLocation = Condition + ".png";
+                    pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
                 }
             }
             catch (WebException exp)
@@ -275,8 +285,9 @@ namespace weather
 
         private void weather_SizeChanged(object sender, EventArgs e)
         {
-
+         
         }
+
         private void weather_FormClosing(object sender, FormClosingEventArgs e)
         {
 
@@ -297,16 +308,17 @@ namespace weather
 
         private void refreshToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            citylbl.Text = citytxt.Text;
-            City = citytxt.Text;
-            Interval = int.Parse(intervaltxt.Text);
+            
             getWeather();
-            aTimer.Stop();
-            aTimer.Interval = Interval;
-            aTimer.Start();
+            
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripTextBox1_Click(object sender, EventArgs e)
         {
 
         }
